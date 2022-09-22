@@ -1,32 +1,37 @@
-// Case_Cart_Boiler_1.v0
+// squawkbox_v1.0.1 22 Sept 2022 @ 1400
 
 #include <SD.h>
 #include <ModbusMaster.h>
 
 File myFile;
-
+//The following const int pins are all pre-run in the PCB:
 const int low1 = 5;
 const int low2 = 6;
 const int alarmPin = 8;
-const int MAX485_DE = 3;
-const int MAX485_RE_NEG = 2;
-const int SIMpin = A3;
-const int debounceInterval = 3000;
+const int hlpcIN = 14;
+const int hlpcOUT = 15;
+const int MAX485_DE = 3;//to modbus module
+const int MAX485_RE_NEG = 2;//to modbus module
+const int SIMpin = A3;// this pin is routed to SIM pin 12 for boot (DF Robot SIM7000A module)
+
+const int debounceInterval = 3000;//to prevent false alarms from electrical noise.
+//Setting this debounce too high will prevent the annunciation of instantaneous alarms like a bouncing LWCO.
+//NEEDS TO BE MADE CHANGEABLE ON SD CARD
+
+//declare state-reading variables
 int primaryCutoff;
-int counter1;
+int plwcCounter;
 int secondaryCutoff;
-int counter2;
+int slwcCounter;
 int alarm;
-int counter3;
-int hlpcIN = 14;
-int hlpcOUT = 15;
+int alarmCounter;
 int hlpcCOMMON;
 int hlpcNC;
-int counter4;
+int hlpcCounter;
 
 //char urlHeaderArray[] = "AT+HTTPPARA=\"URL\",\"http://relay-post-8447.twil.io/secondary-low-water?";
-//char contactFromArray1[] = "From=%2b19049808059&";
-//char contactToArray1[] = "To=%2b17065755866&";
+//char contactFromArray[] = "From=%2b19049808059&";
+//char conToTotalArray[] = "To=%2b17065755866&";
 
 char SetCombody[] = "Body=SquawkBox%20Setup%20Complete\"\r";
 char LWbody[] = "Body=Primary%20Low%20Water\"\r";
@@ -36,21 +41,9 @@ char HLPCbody[] = "Body=High%20Pressure%20Alarm\"\r";
 char CHECKbody[] = "Body=Good%20Check\"\r";
 char BCbody[] = "Body=Boiler%20Down\"\r";
 
-String URLheader = "";
-String conFrom1 = "";
-String conTo1 = "";
-String conTo2 = "";
-String conTo3 = "";
-String conTo4 = "";
-
-char contactFromArray1[25];
-char contactToArray1[25];
-char contactToArray2[25];
-char contactToArray3[25];
-char contactToArray4[25];
+char contactFromArray[25];
+char conToTotalArray[60];
 char urlHeaderArray[100];
-unsigned char data = 0;
-char incomingChar = "";
 
 unsigned long currentMillis = 0;
 unsigned long difference = 0;
@@ -93,45 +86,12 @@ void setup()
   node.begin(1, Serial);
   node.preTransmission(preTransmission);
   node.postTransmission(postTransmission);
-
+  boot_SD(); 
   SIMboot();
   // Give time to your GSM shield log on to network
-  delay(15000);
   loadContacts();
   Serial.println(F("Contacts Loaded.  Booting SIM module.  Initiating wakeup sequence..."));
-  delay(2000);
-  //PUT SIM MODULE WAKEUP HERE
-  Serial.println("Hey!  Wake up!");
-  Serial1.print("AT\r"); //Manufacturer identification
-  delay(50);
-  Serial1.print("AT\r"); //Manufacturer identification
-  delay(50);
-  Serial1.print("AT\r"); //Manufacturer identification
-  delay(50);
-  Serial1.print("AT\r"); //Manufacturer identification
-  delay(50);
-  Serial1.print("AT\r"); //Manufacturer identification
-  delay(50);
-  //SIM MODULE SETUP---
-  Serial1.print("AT+CGDCONT=1,\"IP\",\"super\"\r");
-  delay(500);
-  Serial1.print("AT+COPS=1,2,\"310410\"\r");
-  delay(5000);
-  Serial1.print("AT+SAPBR=3,1,\"APN\",\"super\"\r");
-  delay(3000);
-  Serial1.print("AT+SAPBR=1,1\r");
-  delay(2000);
-  Serial1.print("AT+CMGD=0,4\r");
-  delay(100);
-  Serial1.print("AT+CMGF=1\r");
-  //PUT TEST MESSAGE HERE
-  delay(100);
-  Serial1.print("AT+CNMI=2,2,0,0,0\r");
-  delay(100);
-  sendSMS(urlHeaderArray, contactToArray1, contactFromArray1, SetCombody);
-  //sendSMS(urlHeaderArray, contactToArray2, contactFromArray1, SetCombody);
-  //sendSMS(urlHeaderArray, contactToArray3, contactFromArray1, SetCombody);
-  //sendSMS(urlHeaderArray, contactToArray4, contactFromArray1, SetCombody);
+  initiateSim();
   Serial.println(F("Setup complete. Entering main loop"));
 }
 
@@ -144,7 +104,6 @@ void loop()
   hlpcNC = digitalRead(hlpcOUT);
   currentMillis = millis();
 
-  //resetCounters();
   primary_LW();
   secondary_LW();
   Honeywell_alarm();
@@ -153,46 +112,9 @@ void loop()
   SMSRequest();
 }
 
-// void resetCounters()
-// {
-//   if (primaryCutoff == LOW)
-//   {
-//     alarmSwitch = false;
-//     difference = 0;
-//     alarmTime = 0;
-//     counter1 = 0;
-//   }
-//   if (secondaryCutoff == LOW)
-//   {
-//     alarmSwitch2 = false;
-//     difference2 = 0;
-//     alarmTime2 = 0;
-//     counter2 = 0;
-//   }
-//   if (alarm == LOW)
-//   {
-//     alarmSwitch3 = false;
-//     counter3 = 0;
-//     difference3 = 0;
-//     alarmTime3 = 0;
-//   }
-//   if ((hlpcCOMMON == HIGH) && (hlpcNC == HIGH))
-//   {
-//     alarmSwitch4 = false;
-//     difference4 = 0;
-//     alarmTime4 = 0;
-//     counter4 = 0;
-//   }
-//   //this next line may not be necessary, but I think it will help prevent against false alarms on HLPC
-//   if (hlpcCOMMON == LOW)
-//   {
-//     counter4 = 1;
-//   }
-// }
-
 void primary_LW()
 {
-  if ((primaryCutoff == HIGH) && (counter1 == 0))
+  if ((primaryCutoff == HIGH) && (plwcCounter == 0))
   {
     if (alarmSwitch == false)
     {
@@ -205,13 +127,10 @@ void primary_LW()
     if ( difference >= debounceInterval)
     {
       Serial.println(F("Primary low water.  Sending message"));
-      sendSMS(urlHeaderArray, contactToArray1, contactFromArray1, LWbody);
-      //sendSMS(urlHeaderArray, contactToArray2, contactFromArray1, LWbody);
-      //sendSMS(urlHeaderArray, contactToArray3, contactFromArray1, LWbody);
-      //sendSMS(urlHeaderArray, contactToArray4, contactFromArray1, LWbody);
+      sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, LWbody);
 
       Serial.println(F("message sent or simulated"));
-      counter1 = 1;
+      plwcCounter = 1;
       difference = 0;
       alarmSwitch = false;
       alarmTime = 0;
@@ -224,12 +143,12 @@ void primary_LW()
   }
   else
   {
-    if ((primaryCutoff == LOW) && (counter1 == 1))
+    if ((primaryCutoff == LOW) && (plwcCounter == 1))
     {
       alarmSwitch = false;
       difference = 0;
       alarmTime = 0;
-      counter1 = 0;
+      plwcCounter = 0;
       return;
     }
   }
@@ -237,7 +156,7 @@ void primary_LW()
 
 void secondary_LW()
 {
-  if ((secondaryCutoff == HIGH) && (counter2 == 0))
+  if ((secondaryCutoff == HIGH) && (slwcCounter == 0))
   {
     if (alarmSwitch2 == false)
     {
@@ -250,12 +169,10 @@ void secondary_LW()
     if ( difference2 >= debounceInterval)
     {
       Serial.println(F("Secondary low water.  Sending message."));
-      sendSMS(urlHeaderArray, contactToArray1, contactFromArray1, LW2body);
-      //sendSMS(urlHeaderArray, contactToArray2, contactFromArray1, LW2body);
-      //sendSMS(urlHeaderArray, contactToArray3, contactFromArray1, LW2body);
-      //sendSMS(urlHeaderArray, contactToArray4, contactFromArray1, LW2body);
+      sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, LW2body);
+
       Serial.println(F("message sent or simulated"));
-      counter2 = 1;
+      slwcCounter = 1;
       difference2 = 0;
       alarmSwitch2 = false;
       alarmTime2 = 0;
@@ -268,12 +185,12 @@ void secondary_LW()
   }
   else
   {
-    if ((secondaryCutoff == LOW) && (counter2 == 1))
+    if ((secondaryCutoff == LOW) && (slwcCounter == 1))
     {
       alarmSwitch2 = false;
       difference2 = 0;
       alarmTime2 = 0;
-      counter2 = 0;
+      slwcCounter = 0;
       return;
     }
   }
@@ -281,7 +198,7 @@ void secondary_LW()
 
 void Honeywell_alarm()
 {
-  if ((alarm == HIGH) && (counter3 == 0))
+  if ((alarm == HIGH) && (alarmCounter == 0))
   {
     if (alarmSwitch3 == false)
     {
@@ -294,14 +211,12 @@ void Honeywell_alarm()
     if ( difference3 >= debounceInterval)
     {
       Serial.println(F("sending alarm message"));
-      sendSMS(urlHeaderArray, contactToArray1, contactFromArray1, BCbody);
-      //sendSMS(urlHeaderArray, contactToArray2, contactFromArray1, BCbody);
-      //sendSMS(urlHeaderArray, contactToArray3, contactFromArray1, BCbody);
-      //sendSMS(urlHeaderArray, contactToArray4, contactFromArray1, BCbody);
+      sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, BCbody);
+
       Serial.println(F("about to enter modbus reading function..."));
       readModbus();
       Serial.println(F("message sent or simulated"));
-      counter3 = 1;
+      alarmCounter = 1;
       difference3 = 0;
       alarmSwitch3 = false;
       alarmTime3 = 0;
@@ -314,12 +229,12 @@ void Honeywell_alarm()
   }
   else
   {
-    if ((alarm == LOW) && (counter3 == 1))
+    if ((alarm == LOW) && (alarmCounter == 1))
     {
       alarmSwitch3 = false;
       difference3 = 0;
       alarmTime3 = 0;
-      counter3 = 0;
+      alarmCounter = 0;
       return;
     }
   }
@@ -327,7 +242,7 @@ void Honeywell_alarm()
 
 void HLPC()
 {
-  if ((hlpcCOMMON == HIGH) && (hlpcNC == LOW) && (counter4 == 0))
+  if ((hlpcCOMMON == HIGH) && (hlpcNC == LOW) && (hlpcCounter == 0))
   {
     if (alarmSwitch4 == false)
     {
@@ -340,12 +255,10 @@ void HLPC()
     if ( difference4 >= debounceInterval)
     {
       Serial.println("Sending HLPC alarm message");
-      sendSMS(urlHeaderArray, contactToArray1, contactFromArray1, HLPCbody);
-      //sendSMS(urlHeaderArray, contactToArray2, contactFromArray1, HLPCbody);
-      //sendSMS(urlHeaderArray, contactToArray3, contactFromArray1, HLPCbody);
-      //sendSMS(urlHeaderArray, contactToArray4, contactFromArray1, HLPCbody);
+      sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, HLPCbody);
+
       Serial.println(F("message sent or simulated"));
-      counter4 = 1;
+      hlpcCounter = 1;
       difference4 = 0;
       alarmSwitch4 = false;
       alarmTime4 = 0;
@@ -358,12 +271,12 @@ void HLPC()
   }
   else
   {
-    if ((hlpcCOMMON == HIGH) && (hlpcNC == HIGH) && (counter4 == 1))
+    if ((hlpcNC == HIGH) && (hlpcCounter == 1))
     {
       alarmSwitch4 = false;
       difference4 = 0;
       alarmTime4 = 0;
-      counter4 = 0;
+      hlpcCounter = 0;
       return;
     }
   }
@@ -376,7 +289,7 @@ void sendSMS(char pt1[], char pt2[], char pt3[], char pt4[])
   strcat(finalURL, pt2);
   strcat(finalURL, pt3);
   strcat(finalURL, pt4);
-  delay(500);
+  Serial.print("finalURL is: ");
   Serial.println(finalURL);
   delay(20);
   Serial1.print("AT+HTTPTERM\r");
@@ -420,7 +333,7 @@ void timedmsg()
 
   if (difference5 >= dailytimer)
   {
-    sendSMS(urlHeaderArray, contactToArray1, contactFromArray1, REPbody);
+    sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, REPbody);
     difference5 = 0;
     msgswitch = false;
     msgtimer1 = 0;
@@ -431,7 +344,7 @@ void timedmsg()
 void SMSRequest()
 {
   if (Serial1.available() > 0) {
-    incomingChar = Serial1.read();
+    char incomingChar = Serial1.read();
     Serial.print(incomingChar);
     if (incomingChar == 'C') {
       delay(100);
@@ -455,7 +368,7 @@ void SMSRequest()
               incomingChar = "";
               Serial.println(F("GOOD CHECK. SMS SYSTEMS ONLINE"));
               Serial.println(F("SENDING CHECK VERIFICATION MESSAGE")) ;
-              sendSMS(urlHeaderArray, contactToArray1, contactFromArray2, CHECKbody);
+              sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, CHECKbody);
               Serial.println("verification message sent");
               Serial1.print("AT+CMGD=0,4\r");
               delay(100);
@@ -466,159 +379,95 @@ void SMSRequest()
       }
     }
   }
-  incomingChar = "";
   return;
 }
 
 void loadContacts()
 {
-  if (!SD.begin(10)) 
+  String URLheader = "";
+  String conFrom1 = "";
+  String conTo1 = "";
+  String conTo2 = "";
+  String conTo3 = "";
+  String conTo4 = "";
+  String conToTotal = "To=";
+
+//-------load "from" number.  This is the number alert messages will apear to be from------//
+
+  conFrom1 = fill_from_SD("from1.txt");
+  conFrom1.toCharArray(contactFromArray, 25);
+  Serial.print("From nums: ");
+  Serial.print(contactFromArray);
+
+//------load "to" numbers.  These are the numbers alert messages will be sent to------//
+
+  conTo1 = fill_from_SD("To1.txt");
+  if (conTo1[0] > 0) 
   {
-    Serial.println(F("initialization failed!"));
-    sendSMS(urlHeaderArray, "To=%2b16158122833&", "From=%2b19049808059&", "Body=SD%20Module%20Failed%20CaseCartBoiler1\"\r");
-    while (1);
+    conToTotal += conTo1;
   }
-  Serial.println(F("initialization done."));
 
-  //------------------load "from" number.  This is the number alert messages will apear to be from-------------//
-
-  myFile = SD.open("from1.txt");
-  if (myFile) 
+  conTo2 = fill_from_SD("To2.txt");
+  if (conTo2[0] > 0) 
   {
-    Serial.println("phone number command 1");
-    // read from the file until there's nothing else in it:
-    while (myFile.available()) 
+    conToTotal += "," + conTo2;
+  }
+
+  conTo3 = fill_from_SD("To3.txt");
+  if (conTo3[0] > 0) 
+  {
+    conToTotal += "," + conTo3;
+  }
+
+  conTo4 = fill_from_SD("To4.txt");
+  if (conTo4[0] > 0) 
+  {
+    conToTotal += "," + conTo3;
+  }
+
+  conToTotal += "&";//format the "to" list of numbers for being in the URL by ending it with '&' so that next parameter can come after
+
+  Serial.print(F("The total contact list is: "));
+  Serial.println(conToTotal);
+  Serial.print("fourth position character: ");
+  Serial.println(conToTotal[3]);
+
+  if (conToTotal[3] == ',')
+  {
+    Serial.print(F("Oops. Found a ',' where it soundnt be... Fixing NOW."));
+    conToTotal.remove(3, 1);
+    Serial.print(F("Corrected contact list: "));
+    Serial.println(conToTotal);
+  }
+
+  conToTotal.toCharArray(conToTotalArray, 60);
+
+  URLheader = fill_from_SD("URL.txt");
+  URLheader.toCharArray(urlHeaderArray, 100);
+  Serial.print("URL header is: ");
+  Serial.println(urlHeaderArray);
+}
+
+String fill_from_SD(String file_name)
+{
+  String temporary_string = "";
+  String info_from_SD = "";
+  myFile = SD.open(file_name);
+  if (myFile) 
+  { // read from the file until there's nothing else in it:
+    while (myFile.available())
     {
       char c = myFile.read();  //gets one byte from serial buffer
-      conFrom1 += c;
+      info_from_SD += c;
     }
     myFile.close();
-  } 
-  else 
-  {
-    Serial.println("error opening from1.txt");
+    return info_from_SD;
   }
-  //convert the String into a character array
-  conFrom1.toCharArray(contactFromArray1, 25);
-  Serial.print(F("The first phone number FROM String is "));
-  Serial.println(conFrom1);
-  Serial.print(F("The first phone number FROM char array is "));
-  Serial.println(contactFromArray1);
-
-  //------------------load first contact number-------------//
-
-  myFile = SD.open("to1.txt");
-  if (myFile) 
+  else
   {
-    Serial.println("phone number 1 command");
-    while (myFile.available()) 
-    {
-      char c = myFile.read();
-      conTo1 += c;
-    }
-    myFile.close();
+    // if the file didn't open, print an error:
+    Serial.println("error opening SD file to load in contact #s.");
   } 
-  else 
-  {
-    Serial.println("error opening to1.txt");
-  }
-  conTo1.toCharArray(contactToArray1, 25);
-  Serial.print(F("The first phone number TO String is "));
-  Serial.println(conTo1);
-  Serial.print(F("The first phone number TO char array is "));
-  Serial.println(contactToArray1);
-
-  //------------------load second contact number-------------//
-
-  myFile = SD.open("to2.txt");
-  if (myFile) 
-  {
-    Serial.println(F("phone number 2 command"));
-    while (myFile.available()) 
-    {
-      char c = myFile.read();
-      conTo2 += c;
-    }
-    myFile.close();
-  } 
-  else 
-  {
-    Serial.println(F("error opening to2.txt"));
-  }
-  conTo2.toCharArray(contactToArray2, 25);
-  Serial.print(F("The second phone number TO String is "));
-  Serial.println(conTo2);
-  Serial.print(F("The second phone number TO char array is "));
-  Serial.println(contactToArray2);
-
-  //------------------load third contact number-------------//
-
-  myFile = SD.open("to3.txt");
-  if (myFile)
-  {
-    Serial.println("phone number 3 command");
-    while (myFile.available()) 
-    {
-      char c = myFile.read();
-      conTo3 += c;
-    }
-    myFile.close();
-  } 
-  else 
-  {
-    Serial.println("error opening to3.txt");
-  }
-  conTo3.toCharArray(contactToArray3, 25);
-  Serial.print(F("The third phone number TO String is "));
-  Serial.println(conTo3);
-  Serial.print(F("The third phone number TO char array is "));
-  Serial.println(contactToArray3);
-
-  //------------------load fourth contact number-------------//
-
-  myFile = SD.open("to4.txt");
-  if (myFile) 
-  {
-    Serial.println("phone number 4 command");
-    while (myFile.available()) 
-    {
-      char c = myFile.read();
-      conTo4 += c;
-    }
-    myFile.close();
-  } 
-  else 
-  {
-    Serial.println("error opening to4.txt");
-  }
-  conTo4.toCharArray(contactToArray4, 25);
-  Serial.print(F("The fourth phone number TO String is "));
-  Serial.println(conTo4);
-  Serial.print(F("The fourth phone number TO char array is "));
-  Serial.println(contactToArray4);
-
-  //------------------load URL header-------------//
-
-  myFile = SD.open("URL.txt");
-  if (myFile) 
-  {
-    Serial.println(F("loading URL header"));
-    while (myFile.available()) 
-    {
-      char c = myFile.read();
-      URLheader += c;
-    }
-    myFile.close();
-  } 
-  else 
-  {
-    Serial.println("error opening URL.txt");
-  }
-  URLheader.toCharArray(urlHeaderArray, 100);
-  Serial.print(F("The URL header is "));
-  Serial.println(URLheader);
-  Serial.print(F("The URL header array is  "));
-  Serial.println(urlHeaderArray);
 }
 
 void preTransmission() // user designated action required by the MODBUS library
@@ -635,85 +484,48 @@ void postTransmission()
 void readModbus()
 {
   Serial.println("In the readModbus() function now");
-  uint16_t result;
+  uint16_t result = node.readHoldingRegisters (0x0000, 1);
+  Serial.print("The alarm register value is: ");
+  Serial.println(result);
 
-  result = node.readHoldingRegisters (0x0000, 1);
   if (result == node.ku8MBSuccess)
   {
+    Serial.println("Alarm register result was success");
     int alarmRegister = node.getResponseBuffer(result);
     Serial.print("Register response:  ");
     Serial.println(alarmRegister);
 
     switch (alarmRegister)
     {
-      case  1: sendSMS(urlHeaderArray, contactToArray1, contactFromArray1, "Body=Fault%20Code1%20No%20Purge%20Card\"\r");
-               //sendSMS(urlHeaderArray, contactToArray2, contactFromArray1, "Body=Fault%20Code1%20No%20Purge%20Card\"\r");
-               //sendSMS(urlHeaderArray, contactToArray3, contactFromArray1, "Body=Fault%20Code1%20No%20Purge%20Card\"\r");
-               //sendSMS(urlHeaderArray, contactToArray4, contactFromArray1, "Body=Fault%20Code1%20No%20Purge%20Card\"\r");
+      case  1: sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, "Body=Fault%20Code1%20No%20Purge%20Card\"\r");
                break;
-      case 10: sendSMS(urlHeaderArray, contactToArray1, contactFromArray1, "Body=Fault%20Code10%20PreIgnition%20Interlock%20Standby\"\r");
-               //sendSMS(urlHeaderArray, contactToArray2, contactFromArray1, "Body=Fault%20Code10%20PreIgnition%20Interlock%20Standby\"\r");
-               //sendSMS(urlHeaderArray, contactToArray3, contactFromArray1, "Body=Fault%20Code10%20PreIgnition%20Interlock%20Standby\"\r");
-               //sendSMS(urlHeaderArray, contactToArray4, contactFromArray1, "Body=Fault%20Code10%20PreIgnition%20Interlock%20Standby\"\r");
+      case 10: sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, "Body=Fault%20Code10%20PreIgnition%20Interlock%20Standby\"\r");
                break;
-      case 14: sendSMS(urlHeaderArray, contactToArray1, contactFromArray1, "Body=Fault%20Code14%20High%20Fire%20Interlock%20Switch\"\r");
-               //sendSMS(urlHeaderArray, contactToArray2, contactFromArray1, "Body=Fault%20Code14%20High%20Fire%20Interlock%20Switch\"\r");
-               //sendSMS(urlHeaderArray, contactToArray3, contactFromArray1, "Body=Fault%20Code14%20High%20Fire%20Interlock%20Switch\"\r");
-               //sendSMS(urlHeaderArray, contactToArray4, contactFromArray1, "Body=Fault%20Code14%20High%20Fire%20Interlock%20Switch\"\r");
+      case 14: sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, "Body=Fault%20Code14%20High%20Fire%20Interlock%20Switch\"\r");
                break;
-      case 15: sendSMS(urlHeaderArray, contactToArray1, contactFromArray1, "Body=Fault%20Code15%20Unexpected%20Flame\"\r");
-               //sendSMS(urlHeaderArray, contactToArray2, contactFromArray1, "Body=Fault%20Code15%20Unexpected%20Flame\"\r");
-               //sendSMS(urlHeaderArray, contactToArray3, contactFromArray1, "Body=Fault%20Code15%20Unexpected%20Flame\"\r");
-               //sendSMS(urlHeaderArray, contactToArray4, contactFromArray1, "Body=Fault%20Code15%20Unexpected%20Flame\"\r");
+      case 15: sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, "Body=Fault%20Code15%20Unexpected%20Flame\"\r");
                break;
-      case 17: sendSMS(urlHeaderArray, contactToArray1, contactFromArray1, "Body=Fault%20Code17%20Main%20Flame%20Failure%20RUN\"\r");
-               //sendSMS(urlHeaderArray, contactToArray2, contactFromArray1, "Body=Fault%20Code17%20Main%20Flame%20Failure%20RUN\"\r");
-               //sendSMS(urlHeaderArray, contactToArray3, contactFromArray1, "Body=Fault%20Code17%20Main%20Flame%20Failure%20RUN\"\r");
-               //sendSMS(urlHeaderArray, contactToArray4, contactFromArray1, "Body=Fault%20Code17%20Main%20Flame%20Failure%20RUN\"\r");
+      case 17: sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, "Body=Fault%20Code17%20Main%20Flame%20Failure%20RUN\"\r");
               break;
-      case 19: sendSMS(urlHeaderArray, contactToArray1, contactFromArray1, "Body=Fault%20Code19%20Main%20Flame%20Ignition%20Failure\"\r");
-               //sendSMS(urlHeaderArray, contactToArray2, contactFromArray1, "Body=Fault%20Code19%20Main%20Flame%20Ignition%20Failure\"\r");
-               //sendSMS(urlHeaderArray, contactToArray3, contactFromArray1, "Body=Fault%20Code19%20Main%20Flame%20Ignition%20Failure\"\r");
-               //sendSMS(urlHeaderArray, contactToArray4, contactFromArray1, "Body=Fault%20Code19%20Main%20Flame%20Ignition%20Failure\"\r");
+      case 19: sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, "Body=Fault%20Code19%20Main%20Flame%20Ignition%20Failure\"\r");
                break;
-      case 20: sendSMS(urlHeaderArray, contactToArray1, contactFromArray1, "Body=Fault%20Code20%20Low%20Fire%20Interlock%20Switch\"\r");
-               //sendSMS(urlHeaderArray, contactToArray2, contactFromArray1, "Body=Fault%20Code20%20Low%20Fire%20Interlock%20Switch\"\r");
-               //sendSMS(urlHeaderArray, contactToArray3, contactFromArray1, "Body=Fault%20Code20%20Low%20Fire%20Interlock%20Switch\"\r");
-               //sendSMS(urlHeaderArray, contactToArray4, contactFromArray1, "Body=Fault%20Code20%20Low%20Fire%20Interlock%20Switch\"\r");
+      case 20: sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, "Body=Fault%20Code20%20Low%20Fire%20Interlock%20Switch\"\r");
               break;
-      case 28: sendSMS(urlHeaderArray, contactToArray1, contactFromArray1, "Body=Fault%20Code28%20Pilot%20Flame%20Failure\"\r");
-               //sendSMS(urlHeaderArray, contactToArray2, contactFromArray1, "Body=Fault%20Code28%20Pilot%20Flame%20Failure\"\r");
-               //sendSMS(urlHeaderArray, contactToArray3, contactFromArray1, "Body=Fault%20Code28%20Pilot%20Flame%20Failure\"\r");
-               //sendSMS(urlHeaderArray, contactToArray4, contactFromArray1, "Body=Fault%20Code28%20Pilot%20Flame%20Failure\"\r");
+      case 28: sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, "Body=Fault%20Code28%20Pilot%20Flame%20Failure\"\r");
                break;
-      case 29: sendSMS(urlHeaderArray, contactToArray1, contactFromArray1, "Body=Fault%20Code29%20Lockout%20Interlock\"\r");
-               //sendSMS(urlHeaderArray, contactToArray2, contactFromArray1, "Body=Fault%20Code29%20Lockout%20Interlock\"\r");
-               //sendSMS(urlHeaderArray, contactToArray3, contactFromArray1, "Body=Fault%20Code29%20Lockout%20Interlock\"\r");
-               //sendSMS(urlHeaderArray, contactToArray4, contactFromArray1, "Body=Fault%20Code29%20Lockout%20Interlock\"\r");
+      case 29: sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, "Body=Fault%20Code29%20Lockout%20Interlock\"\r");
                break;
-      case 33: sendSMS(urlHeaderArray, contactToArray1, contactFromArray1, "Body=Fault%20Code33%20PreIgnition%20Interlock\"\r");
-               //sendSMS(urlHeaderArray, contactToArray2, contactFromArray1, "Body=Fault%20Code33%20PreIgnition%20Interlock\"\r");
-               //sendSMS(urlHeaderArray, contactToArray3, contactFromArray1, "Body=Fault%20Code33%20PreIgnition%20Interlock\"\r");
-               //sendSMS(urlHeaderArray, contactToArray4, contactFromArray1, "Body=Fault%20Code33%20PreIgnition%20Interlock\"\r");
+      case 33: sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, "Body=Fault%20Code33%20PreIgnition%20Interlock\"\r");
               break;
-      case 47: sendSMS(urlHeaderArray, contactToArray1, contactFromArray1, "Body=Fault%20Code47%20Jumpers%20Changed\"\r");
-               //sendSMS(urlHeaderArray, contactToArray2, contactFromArray1, "Body=Fault%20Code47%20Jumpers%20Changed\"\r");
-               //sendSMS(urlHeaderArray, contactToArray3, contactFromArray1, "Body=Fault%20Code47%20Jumpers%20Changed\"\r");
-               //sendSMS(urlHeaderArray, contactToArray4, contactFromArray1, "Body=Fault%20Code47%20Jumpers%20Changed\"\r");
+      case 47: sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, "Body=Fault%20Code47%20Jumpers%20Changed\"\r");
                break;
-      default: sendSMS(urlHeaderArray, contactToArray1, contactFromArray1, "Body=Fault%20Check%20Fault%20Code\"\r");
-               //sendSMS(urlHeaderArray, contactToArray2, contactFromArray1, "Body=Fault%20Check%20Fault%20Code\"\r");
-               //sendSMS(urlHeaderArray, contactToArray3, contactFromArray1, "Body=Fault%20Check%20Fault%20Code\"\r");
-               //sendSMS(urlHeaderArray, contactToArray4, contactFromArray1, "Body=Fault%20Check%20Fault%20Code\"\r");
+      default: sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, "Body=Fault%20Check%20Fault%20Code\"\r");
               break;
     }
   }
   else
   {
-    sendSMS(urlHeaderArray, contactToArray1, contactFromArray1, "Body=Modbus%20Com%20Fail\"\r");
-    //sendSMS(urlHeaderArray, contactToArray2, contactFromArray1, "Body=Modbus%20Com%20Fail\"\r");
-    //sendSMS(urlHeaderArray, contactToArray3, contactFromArray1, "Body=Modbus%20Com%20Fail\"\r");
-    //sendSMS(urlHeaderArray, contactToArray4, contactFromArray1, "Body=Modbus%20Com%20Fail\"\r");
+    sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, "Body=Modbus%20Com%20Fail\"\r");
   }
 }
 
@@ -736,17 +548,59 @@ void SIMboot()
         sim_buffer = Serial1.read();
         Serial.write(sim_buffer);
       }
-      printf("SIM module appears to be on.  No need to boot\n");
+      Serial.println("SIM module appears to be on.  No need to boot");
       return;
     }
     else 
     {
-      printf("SIM module appears to be off.  Attempting boot...\n");
+      Serial.println("SIM module appears to be off.  Attempting boot...");
       digitalWrite(SIMpin, HIGH);
       delay(3000);
       digitalWrite(SIMpin, LOW);
-      printf("boot attempted.  wait 10 seconds\n");
+      Serial.println("boot attempted.  wait 10 seconds");
       delay(10000);
     }
   }
+}
+
+void initiateSim()
+{
+  Serial.println("Hey!  Wake up!");
+  Serial1.print("AT\r");
+  delay(50);
+  Serial1.print("AT\r");
+  delay(50);
+  Serial1.print("AT\r"); 
+  delay(50);
+  Serial1.print("AT\r"); 
+  delay(50);
+  Serial1.print("AT\r"); 
+  delay(50);
+  //SIM MODULE SETUP
+  Serial1.print("AT+CGDCONT=1,\"IP\",\"super\"\r");//"super" is the key required to log onto the network using Twilio SuperSIM
+  delay(500);
+  Serial1.print("AT+COPS=1,2,\"310410\"\r");//310410 is AT&T's network code https://www.msisdn.net/mccmnc/310410/
+  delay(5000);
+  Serial1.print("AT+SAPBR=3,1,\"APN\",\"super\"\r");//establish SAPBR profile.  APN = "super"
+  delay(3000);
+  Serial1.print("AT+SAPBR=1,1\r");
+  delay(2000);
+  Serial1.print("AT+CMGD=0,4\r");/*this line deletes any existing text messages to ensure
+                                  that the message space is empy and able to accept new messages*/
+  delay(100);
+  Serial1.print("AT+CMGF=1\r");
+  delay(100);
+  Serial1.print("AT+CNMI=2,2,0,0,0\r");
+  delay(100);
+  sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, SetCombody);
+  delay(2000);
+}
+
+void boot_SD()
+{
+  if (!SD.begin(10)) {
+    Serial.println(F("initialization failed!"));
+    while (1);
+  }
+  Serial.println(F("initialization done."));
 }
