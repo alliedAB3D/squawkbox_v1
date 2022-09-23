@@ -1,4 +1,4 @@
-// squawkbox_v1.0.1 22 Sept 2022 @ 1400
+// squawkbox_v1.0.2 23 Sept 2022 @ 1603
 
 #include <SD.h>
 #include <ModbusMaster.h>
@@ -10,6 +10,8 @@ const int low2 = 6;
 const int alarmPin = 8;
 const int hlpcIN = 14;
 const int hlpcOUT = 15;
+const int gasINpin = 16;
+const int gasOUTpin = 17;
 const int MAX485_DE = 3;//to modbus module
 const int MAX485_RE_NEG = 2;//to modbus module
 const int SIMpin = A3;// this pin is routed to SIM pin 12 for boot (DF Robot SIM7000A module)
@@ -28,17 +30,20 @@ int alarmCounter;
 int hlpcCOMMON;
 int hlpcNC;
 int hlpcCounter;
+int gasIN;
+int gasOUT;
+int gasCounter;
 
-//char urlHeaderArray[] = "AT+HTTPPARA=\"URL\",\"http://relay-post-8447.twil.io/secondary-low-water?";
-//char contactFromArray[] = "From=%2b19049808059&";
-//char conToTotalArray[] = "To=%2b17065755866&";
+//example char urlHeaderArray[] = "AT+HTTPPARA=\"URL\",\"http://relay-post-8447.twil.io/secondary-low-water?";
+//example char contactFromArray[] = "From=%2b19049808059&";
+//example char conToTotalArray[] = "To=%2b17065755866&";
 
 char SetCombody[] = "Body=SquawkBox%20Setup%20Complete\"\r";
 char LWbody[] = "Body=Primary%20Low%20Water\"\r";
 char LW2body[] = "Body=Secondary%20Low%20Water\"\r";
 char REPbody[] = "Body=CaseCart%20Routine%20Timer\"\r";
 char HLPCbody[] = "Body=High%20Pressure%20Alarm\"\r";
-char CHECKbody[] = "Body=Good%20Check\"\r";
+//char CHECKbody[] = "Body=Good%20Check\"\r";
 char BCbody[] = "Body=Boiler%20Down\"\r";
 
 char contactFromArray[25];
@@ -51,17 +56,20 @@ unsigned long difference2 = 0;
 unsigned long difference3 = 0;
 unsigned long difference4 = 0;
 unsigned long difference5 = 0;
+unsigned long difference6 = 0;
 unsigned long dailytimer = 43200000;
 unsigned long msgtimer1 = 0;
 unsigned long alarmTime = 0;
 unsigned long alarmTime2 = 0;
 unsigned long alarmTime3 = 0;
 unsigned long alarmTime4 = 0;
+unsigned long alarmTime5 = 0;
 
 bool alarmSwitch = false;
 bool alarmSwitch2 = false;
 bool alarmSwitch3 = false;
 bool alarmSwitch4 = false;
+bool alarmSwitch5 = false;
 bool msgswitch = false;
 
 ModbusMaster node;
@@ -77,6 +85,8 @@ void setup()
   pinMode(alarmPin, INPUT);
   pinMode(hlpcIN, INPUT);
   pinMode(hlpcOUT, INPUT);
+  pinMode(gasINpin, INPUT);
+  pinMode(gasOUTpin, INPUT);
   pinMode(MAX485_RE_NEG, OUTPUT);
   pinMode(MAX485_DE, OUTPUT);
   pinMode(SIMpin, OUTPUT);
@@ -102,12 +112,15 @@ void loop()
   alarm = digitalRead(alarmPin);
   hlpcCOMMON = digitalRead(hlpcIN);
   hlpcNC = digitalRead(hlpcOUT);
+  gasIN = digitalRead(gasINpin);
+  gasOUT = digitalRead(gasOUTpin);
   currentMillis = millis();
 
   primary_LW();
   secondary_LW();
   Honeywell_alarm();
   HLPC();
+  gasPressure();
   timedmsg();
   SMSRequest();
 }
@@ -282,6 +295,48 @@ void HLPC()
   }
 }
 
+void gasPressure()
+{
+  if ((gasIN == HIGH) && (gasOUT == LOW) && (gasCounter == 0))
+  {
+    if (alarmSwitch5 == false)
+    {
+      alarmTime5 = currentMillis;
+      alarmSwitch5 = true;
+      Serial.println("alarmSwitch5 is true");
+    }
+    difference5 = currentMillis - alarmTime5;
+
+    if ( difference5 >= debounceInterval)
+    {
+      Serial.println("Sending Gas Pressure alarm message");
+      sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, "Body=Gas%20Pressure%20Alarm\"\r");
+
+      Serial.println(F("message sent or simulated"));
+      gasCounter = 1;
+      difference5 = 0;
+      alarmSwitch5 = false;
+      alarmTime5 = 0;
+    }
+    if (difference5 < debounceInterval)
+    {
+      Serial.println(difference5);
+      return;
+    }
+  }
+  else
+  {
+    if ((gasOUT == HIGH) && (gasCounter == 1))
+    {
+      alarmSwitch5 = false;
+      difference5 = 0;
+      alarmTime5 = 0;
+      gasCounter = 0;
+      return;
+    }
+  }
+}
+
 void sendSMS(char pt1[], char pt2[], char pt3[], char pt4[])
 {
   char finalURL[250] = "";
@@ -329,12 +384,12 @@ void timedmsg()
     msgtimer1 = currentMillis;
     msgswitch = true;
   }
-  difference5 = currentMillis - msgtimer1;
+  difference6 = currentMillis - msgtimer1;
 
-  if (difference5 >= dailytimer)
+  if (difference6 >= dailytimer)
   {
     sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, REPbody);
-    difference5 = 0;
+    difference6 = 0;
     msgswitch = false;
     msgtimer1 = 0;
   }
@@ -343,32 +398,37 @@ void timedmsg()
 
 void SMSRequest()
 {
-  if (Serial1.available() > 0) {
+  if (Serial1.available() > 0) 
+  {
     char incomingChar = Serial1.read();
-    Serial.print(incomingChar);
-    if (incomingChar == 'C') {
+    //Serial.print(incomingChar);
+    if (incomingChar == 'C') 
+    {
       delay(100);
-      Serial.print(incomingChar);
+      //Serial.print(incomingChar);
       incomingChar = Serial1.read();
-      if (incomingChar == 'H') {
+      if (incomingChar == 'H') 
+      {
         delay(100);
-        Serial.print(incomingChar);
+        //Serial.print(incomingChar);
         incomingChar = Serial1.read();
-        if (incomingChar == 'E') {
+        if (incomingChar == 'E') 
+        {
           delay(100);
-          Serial.print(incomingChar);
+          //Serial.print(incomingChar);
           incomingChar = Serial1.read();
-          if (incomingChar == 'C') {
+          if (incomingChar == 'C') 
+          {
             delay(100);
-            Serial.print(incomingChar);
+            //Serial.print(incomingChar);
             incomingChar = Serial1.read();
-            if (incomingChar == 'K') {
+            if (incomingChar == 'K') 
+            {
               delay(100);
-              Serial.print(incomingChar);
-              incomingChar = "";
+              Serial.println("CHECK recieved!!!");
               Serial.println(F("GOOD CHECK. SMS SYSTEMS ONLINE"));
               Serial.println(F("SENDING CHECK VERIFICATION MESSAGE")) ;
-              sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, CHECKbody);
+              sendSMS(urlHeaderArray, conToTotalArray, contactFromArray,"Body=Communication%20verification%20confirmed\"\r");
               Serial.println("verification message sent");
               Serial1.print("AT+CMGD=0,4\r");
               delay(100);
@@ -390,9 +450,9 @@ void loadContacts()
   String conTo2 = "";
   String conTo3 = "";
   String conTo4 = "";
-  String conToTotal = "To=";
+  String conToTotal = "To=%2b1";
 
-//-------load "from" number.  This is the number alert messages will apear to be from------//
+//------load "from" number.  This is the number alert messages will apear to be from------//
 
   conFrom1 = fill_from_SD("from1.txt");
   conFrom1.toCharArray(contactFromArray, 25);
@@ -429,10 +489,10 @@ void loadContacts()
 
   Serial.print(F("The total contact list is: "));
   Serial.println(conToTotal);
-  Serial.print("fourth position character: ");
-  Serial.println(conToTotal[3]);
+  Serial.print("eighth position character: ");
+  Serial.println(conToTotal[7]);
 
-  if (conToTotal[3] == ',')
+  if (conToTotal[7] == ',')
   {
     Serial.print(F("Oops. Found a ',' where it soundnt be... Fixing NOW."));
     conToTotal.remove(3, 1);
@@ -506,21 +566,21 @@ void readModbus()
       case 15: sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, "Body=Fault%20Code15%20Unexpected%20Flame\"\r");
                break;
       case 17: sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, "Body=Fault%20Code17%20Main%20Flame%20Failure%20RUN\"\r");
-              break;
+               break;
       case 19: sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, "Body=Fault%20Code19%20Main%20Flame%20Ignition%20Failure\"\r");
                break;
       case 20: sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, "Body=Fault%20Code20%20Low%20Fire%20Interlock%20Switch\"\r");
-              break;
+               break;
       case 28: sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, "Body=Fault%20Code28%20Pilot%20Flame%20Failure\"\r");
                break;
       case 29: sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, "Body=Fault%20Code29%20Lockout%20Interlock\"\r");
                break;
       case 33: sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, "Body=Fault%20Code33%20PreIgnition%20Interlock\"\r");
-              break;
+               break;
       case 47: sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, "Body=Fault%20Code47%20Jumpers%20Changed\"\r");
                break;
       default: sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, "Body=Fault%20Check%20Fault%20Code\"\r");
-              break;
+               break;
     }
   }
   else
