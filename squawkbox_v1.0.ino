@@ -1,7 +1,10 @@
-// squawkbox_v1.0.2 23 Sept 2022 @ 1603
+// Case_Cart_Boiler_1.v0
+// squawkbox_v1.0.3 27 Sept 2022 @ 1700
+// Added frememory() test, and completed gaspressure(), and tested the code. 
 
 #include <SD.h>
 #include <ModbusMaster.h>
+#include <MemoryFree.h>
 
 File myFile;
 //The following const int pins are all pre-run in the PCB:
@@ -34,8 +37,8 @@ int gasIN;
 int gasOUT;
 int gasCounter;
 
-//example char urlHeaderArray[] = "AT+HTTPPARA=\"URL\",\"http://relay-post-8447.twil.io/secondary-low-water?";
-//example char contactFromArray[] = "From=%2b19049808059&";
+//example char urlHeaderArray[] = "AT+HTTPPARA="URL","http://relay-post-8447.twil.io/recipient_loop?";
+//example char contactFromArray[] = "From=%2b15034516078&";
 //example char conToTotalArray[] = "To=%2b17065755866&";
 
 char SetCombody[] = "Body=SquawkBox%20Setup%20Complete\"\r";
@@ -78,7 +81,7 @@ void setup()
 {
   Serial.begin(9600);
   Serial1.begin(19200);
-  Serial.println(F("This is Case_Cart_Boiler_1.v0 sketch."));
+  Serial.println(F("This is squawkbox_v1.0 sketch."));
 
   pinMode(low1, INPUT);
   pinMode(low2, INPUT);
@@ -95,14 +98,17 @@ void setup()
 
   node.begin(1, Serial);
   node.preTransmission(preTransmission);
-  node.postTransmission(postTransmission);
-  boot_SD(); 
+  node.postTransmission(postTransmission); 
   SIMboot();
-  // Give time to your GSM shield log on to network
-  loadContacts();
-  Serial.println(F("Contacts Loaded.  Booting SIM module.  Initiating wakeup sequence..."));
   initiateSim();
+  boot_SD();
+  loadContacts();
+  sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, SetCombody);
   Serial.println(F("Setup complete. Entering main loop"));
+//  Serial.print(F("setup() Free RAM = "));
+//  Serial.print(freeMemory());
+//  Serial.println(F(" bytes."));
+  memoryTest();
 }
 
 void loop()
@@ -141,12 +147,12 @@ void primary_LW()
     {
       Serial.println(F("Primary low water.  Sending message"));
       sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, LWbody);
-
       Serial.println(F("message sent or simulated"));
+      memoryTest();
+//      Serial.print(F("primary_LW() Free RAM = "));
+//      Serial.print(freeMemory());
+//      Serial.println(F(" bytes."));
       plwcCounter = 1;
-      difference = 0;
-      alarmSwitch = false;
-      alarmTime = 0;
     }
     if (difference < debounceInterval)
     {
@@ -156,7 +162,7 @@ void primary_LW()
   }
   else
   {
-    if ((primaryCutoff == LOW) && (plwcCounter == 1))
+    if (primaryCutoff == LOW && alarmSwitch)
     {
       alarmSwitch = false;
       difference = 0;
@@ -183,12 +189,12 @@ void secondary_LW()
     {
       Serial.println(F("Secondary low water.  Sending message."));
       sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, LW2body);
-
       Serial.println(F("message sent or simulated"));
+      memoryTest();
+//      Serial.print(F("secondary_LW() Free RAM = "));
+//      Serial.print(freeMemory());
+//      Serial.println(F(" bytes."));
       slwcCounter = 1;
-      difference2 = 0;
-      alarmSwitch2 = false;
-      alarmTime2 = 0;
     }
     if (difference2 < debounceInterval)
     {
@@ -198,7 +204,7 @@ void secondary_LW()
   }
   else
   {
-    if ((secondaryCutoff == LOW) && (slwcCounter == 1))
+    if (secondaryCutoff == LOW && alarmSwitch2)
     {
       alarmSwitch2 = false;
       difference2 = 0;
@@ -223,16 +229,16 @@ void Honeywell_alarm()
 
     if ( difference3 >= debounceInterval)
     {
-      Serial.println(F("sending alarm message"));
+      Serial.println(F("sending FSG alarm message"));
       sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, BCbody);
-
-      Serial.println(F("about to enter modbus reading function..."));
+      Serial.println(F("Entering modbus reading function..."));
       readModbus();
       Serial.println(F("message sent or simulated"));
+      memoryTest();
+//      Serial.print(F("Honeywell_alarm() Free RAM = "));
+//      Serial.print(freeMemory());
+//      Serial.println(F(" bytes."));
       alarmCounter = 1;
-      difference3 = 0;
-      alarmSwitch3 = false;
-      alarmTime3 = 0;
     }
     if (difference3 < debounceInterval)
     {
@@ -242,7 +248,7 @@ void Honeywell_alarm()
   }
   else
   {
-    if ((alarm == LOW) && (alarmCounter == 1))
+    if (alarm == LOW && alarmSwitch3)
     {
       alarmSwitch3 = false;
       difference3 = 0;
@@ -269,12 +275,12 @@ void HLPC()
     {
       Serial.println("Sending HLPC alarm message");
       sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, HLPCbody);
-
       Serial.println(F("message sent or simulated"));
+      memoryTest();
+//      Serial.print(F("HLPC() Free RAM = "));
+//      Serial.print(freeMemory());
+//      Serial.println(F(" bytes."));
       hlpcCounter = 1;
-      difference4 = 0;
-      alarmSwitch4 = false;
-      alarmTime4 = 0;
     }
     if (difference4 < debounceInterval)
     {
@@ -284,7 +290,7 @@ void HLPC()
   }
   else
   {
-    if ((hlpcNC == HIGH) && (hlpcCounter == 1))
+    if (hlpcNC && alarmSwitch4)
     {
       alarmSwitch4 = false;
       difference4 = 0;
@@ -311,12 +317,12 @@ void gasPressure()
     {
       Serial.println("Sending Gas Pressure alarm message");
       sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, "Body=Gas%20Pressure%20Alarm\"\r");
-
       Serial.println(F("message sent or simulated"));
+      memoryTest();
+//      Serial.print(F("gasPressure() Free RAM = "));
+//      Serial.print(freeMemory());
+//      Serial.println(F(" bytes."));
       gasCounter = 1;
-      difference5 = 0;
-      alarmSwitch5 = false;
-      alarmTime5 = 0;
     }
     if (difference5 < debounceInterval)
     {
@@ -326,7 +332,7 @@ void gasPressure()
   }
   else
   {
-    if ((gasOUT == HIGH) && (gasCounter == 1))
+    if (gasOUT && alarmSwitch5)
     {
       alarmSwitch5 = false;
       difference5 = 0;
@@ -361,6 +367,10 @@ void sendSMS(char pt1[], char pt2[], char pt3[], char pt4[])
   delay(100);
   Serial1.print("AT+HTTPACTION=1\r");
   delay(5000);
+  memoryTest();
+//  Serial.print(F("Send SMS Free RAM = "));
+//  Serial.print(freeMemory());
+//  Serial.println(F(" bytes."));
 }
 
 // void getResponse()
@@ -395,43 +405,42 @@ void timedmsg()
   }
 }
 
-
 void SMSRequest()
 {
   if (Serial1.available() > 0) 
   {
     char incomingChar = Serial1.read();
     //Serial.print(incomingChar);
-    if (incomingChar == 'C') 
+    if (incomingChar == 'C' || incomingChar == 'c') 
     {
       delay(100);
       //Serial.print(incomingChar);
       incomingChar = Serial1.read();
-      if (incomingChar == 'H') 
+      if (incomingChar == 'H' || incomingChar == 'h') 
       {
         delay(100);
         //Serial.print(incomingChar);
         incomingChar = Serial1.read();
-        if (incomingChar == 'E') 
+        if (incomingChar == 'E' || incomingChar == 'e') 
         {
           delay(100);
           //Serial.print(incomingChar);
           incomingChar = Serial1.read();
-          if (incomingChar == 'C') 
+          if (incomingChar == 'C' || incomingChar == 'c') 
           {
             delay(100);
             //Serial.print(incomingChar);
             incomingChar = Serial1.read();
-            if (incomingChar == 'K') 
+            if (incomingChar == 'K' || incomingChar == 'k') 
             {
-              delay(100);
-              Serial.println("CHECK recieved!!!");
-              Serial.println(F("GOOD CHECK. SMS SYSTEMS ONLINE"));
-              Serial.println(F("SENDING CHECK VERIFICATION MESSAGE")) ;
+              Serial.println(F("GOOD CHECK. SMS SYSTEMS ONLINE. SENDING CHECK VERIFICATION MESSAGE"));
               sendSMS(urlHeaderArray, conToTotalArray, contactFromArray,"Body=Communication%20verification%20confirmed\"\r");
               Serial.println("verification message sent");
               Serial1.print("AT+CMGD=0,4\r");
-              delay(100);
+              memoryTest();
+  //          Serial.print(F("SMS REQUEST Free RAM = "));
+  //          Serial.print(freeMemory());
+  //          Serial.println(F(" bytes."));
               return;
             }
           }
@@ -451,12 +460,16 @@ void loadContacts()
   String conTo3 = "";
   String conTo4 = "";
   String conToTotal = "To=%2b1";
+  memoryTest();
+//  Serial.print(F("loadContacts() BEGENNING Free RAM = "));
+//  Serial.print(freeMemory());
+//  Serial.println(F(" bytes."));
 
 //------load "from" number.  This is the number alert messages will apear to be from------//
 
   conFrom1 = fill_from_SD("from1.txt");
   conFrom1.toCharArray(contactFromArray, 25);
-  Serial.print("From nums: ");
+  Serial.print("From number is: ");
   Serial.print(contactFromArray);
 
 //------load "to" numbers.  These are the numbers alert messages will be sent to------//
@@ -487,7 +500,7 @@ void loadContacts()
 
   conToTotal += "&";//format the "to" list of numbers for being in the URL by ending it with '&' so that next parameter can come after
 
-  Serial.print(F("The total contact list is: "));
+  Serial.print(F(" The total contact list is: "));
   Serial.println(conToTotal);
   Serial.print("eighth position character: ");
   Serial.println(conToTotal[7]);
@@ -506,6 +519,10 @@ void loadContacts()
   URLheader.toCharArray(urlHeaderArray, 100);
   Serial.print("URL header is: ");
   Serial.println(urlHeaderArray);
+//  Serial.print(F("loadContacts() ENDING Free RAM = "));
+//  Serial.print(freeMemory());
+//  Serial.println(F(" bytes."));
+  Serial.println(F("Contacts should be Loaded."));
 }
 
 String fill_from_SD(String file_name)
@@ -527,6 +544,7 @@ String fill_from_SD(String file_name)
   {
     // if the file didn't open, print an error:
     Serial.println("error opening SD file to load in contact #s.");
+    return "fial";
   } 
 }
 
@@ -591,6 +609,7 @@ void readModbus()
 
 void SIMboot()
 {
+  Serial.println("Booting SIM module...");
 //This function only boots the SIM module if it needs to be booted
 //This prevents nuisance power-downs upon startup
   unsigned char sim_buffer {};
@@ -625,6 +644,7 @@ void SIMboot()
 
 void initiateSim()
 {
+  Serial.println("Initiating wakeup sequence...");
   Serial.println("Hey!  Wake up!");
   Serial1.print("AT\r");
   delay(50);
@@ -652,15 +672,47 @@ void initiateSim()
   delay(100);
   Serial1.print("AT+CNMI=2,2,0,0,0\r");
   delay(100);
-  sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, SetCombody);
+  //sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, SetCombody);
   delay(2000);
 }
 
 void boot_SD()
 {
-  if (!SD.begin(10)) {
-    Serial.println(F("initialization failed!"));
-    while (1);
+  Serial.println("Booting SD module...");
+  if (!SD.begin(10)) 
+  {
+    Serial.println(F("SD Module initialization failed!"));
+    delay(5000);
+    for(int i = 0; i < 4; ++i)
+    {
+      if (!SD.begin(10)) 
+      {
+        Serial.println(F("SD Module initialization failed!"));
+        sendSMS("AT+HTTPPARA=\"URL\",\"http://relay-post-8447.twil.io/recipient_loop?", "To=%2b16158122833&", "From=%2b15034516078&", "Body=SD%20Module%20Initialization%20Fail\"\r");
+        delay(3000);
+      }
+      else
+      {
+        Serial.println(F("SD Module initialization done."));
+        break;
+      }
+    }
   }
-  Serial.println(F("initialization done."));
+  else
+  {
+    Serial.println(F("SD Module initialization done."));
+  }
+}
+
+void memoryTest()
+{
+  int threshold = 3000;
+  int memory = freeMemory();
+  Serial.print(F("memoryTest() Free RAM = "));
+  Serial.print(memory);
+  Serial.println(F(" bytes "));
+  if (memory < threshold)
+  {
+    sendSMS(urlHeaderArray, "To=%2b16158122833&", contactFromArray, "Body=Memory%20Alert%20Possible%20Leak\"\r");
+  }
 }
