@@ -1,6 +1,5 @@
-// Case_Cart_Boiler_1.v0
-// squawkbox_v1.0.3 27 Sept 2022 @ 1700
-// Added frememory() test, and completed gaspressure(), and tested the code. 
+// squawkbox_v1.0.3 28 Sept 2022 @ 1700
+// removed selfCheck() and finalized testing
 
 #include <SD.h>
 #include <ModbusMaster.h>
@@ -139,10 +138,9 @@ void primary_LW()
     {
       alarmTime = currentMillis;
       alarmSwitch = true;
-      Serial.println("alarmSwitch is true");
+      Serial.println(F("primary_LW alarmSwitch is true"));
     }
     difference = currentMillis - alarmTime;
-
     if ( difference >= debounceInterval)
     {
       Serial.println(F("Primary low water.  Sending message"));
@@ -181,7 +179,7 @@ void secondary_LW()
     {
       alarmTime2 = currentMillis;
       alarmSwitch2 = true;
-      Serial.println(F("alarmSwitch2 is true"));
+      Serial.println(F("secondary_LW() alarmSwitch2 is true"));
     }
     difference2 = currentMillis - alarmTime2;
 
@@ -223,7 +221,7 @@ void Honeywell_alarm()
     {
       alarmTime3 = currentMillis;
       alarmSwitch3 = true;
-      Serial.println("alarmSwitch is true");
+      Serial.println(F("Honeywell_alarm() alarmSwitch is true"));
     }
     difference3 = currentMillis - alarmTime3;
 
@@ -267,13 +265,13 @@ void HLPC()
     {
       alarmTime4 = currentMillis;
       alarmSwitch4 = true;
-      Serial.println("alarmSwitch is true");
+      Serial.println(F("HLPC() alarmSwitch is true"));
     }
     difference4 = currentMillis - alarmTime4;
 
     if ( difference4 >= debounceInterval)
     {
-      Serial.println("Sending HLPC alarm message");
+      Serial.println(F("Sending HLPC alarm message"));
       sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, HLPCbody);
       Serial.println(F("message sent or simulated"));
       memoryTest();
@@ -309,13 +307,13 @@ void gasPressure()
     {
       alarmTime5 = currentMillis;
       alarmSwitch5 = true;
-      Serial.println("alarmSwitch5 is true");
+      Serial.println(F("gasPressure() alarmSwitch5 is true"));
     }
     difference5 = currentMillis - alarmTime5;
 
     if ( difference5 >= debounceInterval)
     {
-      Serial.println("Sending Gas Pressure alarm message");
+      Serial.println(F("Sending Gas Pressure alarm message"));
       sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, "Body=Gas%20Pressure%20Alarm\"\r");
       Serial.println(F("message sent or simulated"));
       memoryTest();
@@ -373,7 +371,7 @@ void sendSMS(char pt1[], char pt2[], char pt3[], char pt4[])
 //  Serial.println(F(" bytes."));
 }
 
-// void getResponse()
+// void getResponse()// for troubleshooting the AT commands
 // {
 //   if (Serial1.available())
 //   {
@@ -435,7 +433,7 @@ void SMSRequest()
             {
               Serial.println(F("GOOD CHECK. SMS SYSTEMS ONLINE. SENDING CHECK VERIFICATION MESSAGE"));
               sendSMS(urlHeaderArray, conToTotalArray, contactFromArray,"Body=Communication%20verification%20confirmed\"\r");
-              Serial.println("verification message sent");
+              Serial.println(F("User verification message sent"));
               Serial1.print("AT+CMGD=0,4\r");
               memoryTest();
   //          Serial.print(F("SMS REQUEST Free RAM = "));
@@ -469,8 +467,8 @@ void loadContacts()
 
   conFrom1 = fill_from_SD("from1.txt");
   conFrom1.toCharArray(contactFromArray, 25);
-  Serial.print("From number is: ");
-  Serial.print(contactFromArray);
+  Serial.print(F("From number is: "));
+  Serial.println(contactFromArray);
 
 //------load "to" numbers.  These are the numbers alert messages will be sent to------//
 
@@ -500,15 +498,15 @@ void loadContacts()
 
   conToTotal += "&";//format the "to" list of numbers for being in the URL by ending it with '&' so that next parameter can come after
 
-  Serial.print(F(" The total contact list is: "));
+  Serial.print(F("The total contact list is: "));
   Serial.println(conToTotal);
-  Serial.print("eighth position character: ");
+  Serial.print(F("eighth position character: "));
   Serial.println(conToTotal[7]);
 
   if (conToTotal[7] == ',')
   {
     Serial.print(F("Oops. Found a ',' where it soundnt be... Fixing NOW."));
-    conToTotal.remove(3, 1);
+    conToTotal.remove(7, 1);
     Serial.print(F("Corrected contact list: "));
     Serial.println(conToTotal);
   }
@@ -517,7 +515,7 @@ void loadContacts()
 
   URLheader = fill_from_SD("URL.txt");
   URLheader.toCharArray(urlHeaderArray, 100);
-  Serial.print("URL header is: ");
+  Serial.print(F("URL header is: "));
   Serial.println(urlHeaderArray);
 //  Serial.print(F("loadContacts() ENDING Free RAM = "));
 //  Serial.print(freeMemory());
@@ -561,16 +559,16 @@ void postTransmission()
 
 void readModbus()
 {
-  Serial.println("In the readModbus() function now");
+  Serial.println(F("In the readModbus() function now"));
   uint16_t result = node.readHoldingRegisters (0x0000, 1);
-  Serial.print("The alarm register value is: ");
+  Serial.print(F("The alarm register value is: "));
   Serial.println(result);
 
   if (result == node.ku8MBSuccess)
   {
-    Serial.println("Alarm register result was success");
+    Serial.println(F("Alarm register result was success"));
     int alarmRegister = node.getResponseBuffer(result);
-    Serial.print("Register response:  ");
+    Serial.print(F("Register response:  "));
     Serial.println(alarmRegister);
 
     switch (alarmRegister)
@@ -609,7 +607,7 @@ void readModbus()
 
 void SIMboot()
 {
-  Serial.println("Booting SIM module...");
+  Serial.println(F("Booting SIM module..."));
 //This function only boots the SIM module if it needs to be booted
 //This prevents nuisance power-downs upon startup
   unsigned char sim_buffer {};
@@ -627,12 +625,12 @@ void SIMboot()
         sim_buffer = Serial1.read();
         Serial.write(sim_buffer);
       }
-      Serial.println("SIM module appears to be on.  No need to boot");
+      Serial.println(F("SIM module appears to be on.  No need to boot"));
       return;
     }
     else 
     {
-      Serial.println("SIM module appears to be off.  Attempting boot...");
+      Serial.println(F("SIM module appears to be off.  Attempting boot..."));
       digitalWrite(SIMpin, HIGH);
       delay(3000);
       digitalWrite(SIMpin, LOW);
@@ -644,8 +642,8 @@ void SIMboot()
 
 void initiateSim()
 {
-  Serial.println("Initiating wakeup sequence...");
-  Serial.println("Hey!  Wake up!");
+  Serial.println(F("Initiating wakeup sequence..."));
+  Serial.println(F("Hey!  Wake up!"));
   Serial1.print("AT\r");
   delay(50);
   Serial1.print("AT\r");
@@ -706,11 +704,11 @@ void boot_SD()
 
 void memoryTest()
 {
-  int threshold = 3000;
+  const int threshold = 3000;
   int memory = freeMemory();
   Serial.print(F("memoryTest() Free RAM = "));
   Serial.print(memory);
-  Serial.println(F(" bytes "));
+  Serial.println(F(" bytes."));
   if (memory < threshold)
   {
     sendSMS(urlHeaderArray, "To=%2b16158122833&", contactFromArray, "Body=Memory%20Alert%20Possible%20Leak\"\r");
