@@ -1,5 +1,7 @@
-// squawkbox_v1.0.3 28 Sept 2022 @ 1700
-// removed selfCheck() and finalized testing
+// squawkbox_v1.0.4 29 Sept 2022 @ 1700
+// Added for loop the readModbus() to make the read more reliable.  
+// tested ModBus on school boiler.
+// tested new large antenna. 
 
 #include <SD.h>
 #include <ModbusMaster.h>
@@ -559,17 +561,30 @@ void postTransmission()
 
 void readModbus()
 {
-  Serial.println(F("In the readModbus() function now"));
-  uint16_t result = node.readHoldingRegisters (0x0000, 1);
-  Serial.print(F("The alarm register value is: "));
-  Serial.println(result);
+  //Serial.println(F("In the readModbus() function now"));
+  delay(300);
+  uint16_t result;
+  for (int i = 0; i < 5; ++i) 
+  {
+    result = node.readHoldingRegisters (0x0000, 1);
+    delay(100);
+    if (result == node.ku8MBSuccess)
+    {
+      break;
+    }
+  }
+  //Serial.print(F("The alarm register value is: "));
+  //Serial.println(result);
+  delay(300);
 
   if (result == node.ku8MBSuccess)
   {
-    Serial.println(F("Alarm register result was success"));
+    delay(300);
+    //Serial.println(F("Alarm register result was success"));
+    //delay(300);
     int alarmRegister = node.getResponseBuffer(result);
-    Serial.print(F("Register response:  "));
-    Serial.println(alarmRegister);
+    //Serial.print(F("Register response:  "));
+    //Serial.println(alarmRegister);
 
     switch (alarmRegister)
     {
