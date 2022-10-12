@@ -1,7 +1,5 @@
-// squawkbox_v1.0.4 29 Sept 2022 @ 1700
-// Added for loop the readModbus() to make the read more reliable.  
-// tested ModBus on school boiler.
-// tested new large antenna. 
+// squawkbox_v1.0.4 12 Oct 2022 @ 1630
+// Fixed loadContact() bug
 
 #include <SD.h>
 #include <ModbusMaster.h>
@@ -42,7 +40,7 @@ int gasCounter;
 //example char contactFromArray[] = "From=%2b15034516078&";
 //example char conToTotalArray[] = "To=%2b17065755866&";
 
-char SetCombody[] = "Body=SquawkBox%20Setup%20Complete\"\r";
+char SetCombody[] = "Body=SquawkBox%20CaseCart3%20Setup%20Complete\"\r";
 char LWbody[] = "Body=Primary%20Low%20Water\"\r";
 char LW2body[] = "Body=Secondary%20Low%20Water\"\r";
 char REPbody[] = "Body=CaseCart%20Routine%20Timer\"\r";
@@ -495,19 +493,19 @@ void loadContacts()
   conTo4 = fill_from_SD("To4.txt");
   if (conTo4[0] > 0) 
   {
-    conToTotal += "," + conTo3;
+    conToTotal += "," + conTo4;
   }
 
   conToTotal += "&";//format the "to" list of numbers for being in the URL by ending it with '&' so that next parameter can come after
 
   Serial.print(F("The total contact list is: "));
   Serial.println(conToTotal);
-  Serial.print(F("eighth position character: "));
+  Serial.print(F("eighth position character is: "));
   Serial.println(conToTotal[7]);
 
   if (conToTotal[7] == ',')
   {
-    Serial.print(F("Oops. Found a ',' where it soundnt be... Fixing NOW."));
+    Serial.println(F("Oops. Found a ',' where it soundnt be... Fixing NOW."));
     conToTotal.remove(7, 1);
     Serial.print(F("Corrected contact list: "));
     Serial.println(conToTotal);
