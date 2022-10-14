@@ -1,5 +1,6 @@
-// squawkbox_v1.0.4 12 Oct 2022 @ 1630
-// Fixed loadContact() bug
+// squawkbox_v1.0.4 13 Oct 2022 @ 1700
+// Fixed SIM bug
+// Fixed SD Fail bug and added comment to remember
 
 #include <SD.h>
 #include <ModbusMaster.h>
@@ -542,7 +543,7 @@ String fill_from_SD(String file_name)
   {
     // if the file didn't open, print an error:
     Serial.println("error opening SD file to load in contact #s.");
-    return "fial";
+    return "fail";
   } 
 }
 
@@ -698,8 +699,8 @@ void boot_SD()
     {
       if (!SD.begin(10)) 
       {
-        Serial.println(F("SD Module initialization failed!"));
-        sendSMS("AT+HTTPPARA=\"URL\",\"http://relay-post-8447.twil.io/recipient_loop?", "To=%2b16158122833&", "From=%2b15034516078&", "Body=SD%20Module%20Initialization%20Fail\"\r");
+        Serial.println(F("SD Module initialization failed!")); // Change for every new one!!!!!!!
+        sendSMS("AT+HTTPPARA=\"URL\",\"http://relay-post-8447.twil.io/recipient_loop?", "To=%2b16158122833&", "From=%2b19049808059&", "Body=SD%20Module%20Initialization%20Fail\"\r");
         delay(3000);
       }
       else
