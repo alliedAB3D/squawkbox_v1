@@ -1,12 +1,23 @@
-// squawkbox_v1.0.4 13 Oct 2022 @ 1700
-// Fixed SIM bug
-// Fixed SD Fail bug and added comment to remember
+// squawkbox_v1.0.4 17 Oct 2022 @ 1440
+// Added PCB schematic comments
+// Added TODO list
+// Added REMEMBER list
+
+// TODO:
+// Add in a function that checks that the phone # read from the SD card isnt something stupid. 
+// Add in an LED_fault() for if the SIM module fails, the customer will be notified via a fault blink code. 
+
+//*************************REMEMBER****************************************//
+// change default phone numbers for Case Cart testing purposes!!!
+//*************************REMEMBER****************************************//
 
 #include <SD.h>
 #include <ModbusMaster.h>
 #include <MemoryFree.h>
 
 File myFile;
+ModbusMaster node;
+
 //The following const int pins are all pre-run in the PCB:
 const int low1 = 5;
 const int low2 = 6;
@@ -21,7 +32,7 @@ const int SIMpin = A3;// this pin is routed to SIM pin 12 for boot (DF Robot SIM
 
 const int debounceInterval = 3000;//to prevent false alarms from electrical noise.
 //Setting this debounce too high will prevent the annunciation of instantaneous alarms like a bouncing LWCO.
-//NEEDS TO BE MADE CHANGEABLE ON SD CARD
+//NEEDS TO BE MADE CHANGEABLE ON SD CARD?
 
 //declare state-reading variables
 int primaryCutoff;
@@ -41,12 +52,10 @@ int gasCounter;
 //example char contactFromArray[] = "From=%2b15034516078&";
 //example char conToTotalArray[] = "To=%2b17065755866&";
 
-char SetCombody[] = "Body=SquawkBox%20CaseCart3%20Setup%20Complete\"\r";
+char SetCombody[] = "Body=SquawkBox%20CaseCart%20Setup%20Complete\"\r";
 char LWbody[] = "Body=Primary%20Low%20Water\"\r";
 char LW2body[] = "Body=Secondary%20Low%20Water\"\r";
-char REPbody[] = "Body=CaseCart%20Routine%20Timer\"\r";
 char HLPCbody[] = "Body=High%20Pressure%20Alarm\"\r";
-//char CHECKbody[] = "Body=Good%20Check\"\r";
 char BCbody[] = "Body=Boiler%20Down\"\r";
 
 char contactFromArray[25];
@@ -75,12 +84,11 @@ bool alarmSwitch4 = false;
 bool alarmSwitch5 = false;
 bool msgswitch = false;
 
-ModbusMaster node;
-
 void setup() 
 {
   Serial.begin(9600);
-  Serial1.begin(19200);
+  Serial1.begin(19200); /* This functiion call sets up D18 as TX1 and D19 as RX1 on the Mega.
+                       In the PCB (TX1 is ran to PIN 7/RX1) and (RX1 is ran to PIN 8/TX1) on the SIM7000A */
   Serial.println(F("This is squawkbox_v1.0 sketch."));
 
   pinMode(low1, INPUT);
@@ -397,7 +405,7 @@ void timedmsg()
 
   if (difference6 >= dailytimer)
   {
-    sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, REPbody);
+    sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, "Body=CaseCart3%20Routine%20Timer\"\r");
     difference6 = 0;
     msgswitch = false;
     msgtimer1 = 0;
@@ -609,7 +617,7 @@ void readModbus()
                break;
       case 47: sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, "Body=Fault%20Code47%20Jumpers%20Changed\"\r");
                break;
-      default: sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, "Body=Fault%20Check%20Fault%20Code\"\r");
+      default: sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, "Body=Check%20Fault%20Code\"\r");
                break;
     }
   }
@@ -624,6 +632,7 @@ void SIMboot()
   Serial.println(F("Booting SIM module..."));
 //This function only boots the SIM module if it needs to be booted
 //This prevents nuisance power-downs upon startup
+//Writing SIMpin to HIGH will (! not) or (flip) the current ON/OFF state of the SIM module
   unsigned char sim_buffer {};
   for (int i = 0; i < 10; i++)
   {
@@ -644,6 +653,10 @@ void SIMboot()
     }
     else 
     {
+      // if(i == 9)
+      // {
+      //   LED_fault(); // Develop a function that runs a fault code LED blink
+      // }
       Serial.println(F("SIM module appears to be off.  Attempting boot..."));
       digitalWrite(SIMpin, HIGH);
       delay(3000);
@@ -683,8 +696,6 @@ void initiateSim()
   Serial1.print("AT+CMGF=1\r");
   delay(100);
   Serial1.print("AT+CNMI=2,2,0,0,0\r");
-  delay(100);
-  //sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, SetCombody);
   delay(2000);
 }
 
@@ -699,7 +710,7 @@ void boot_SD()
     {
       if (!SD.begin(10)) 
       {
-        Serial.println(F("SD Module initialization failed!")); // Change for every new one!!!!!!!
+        Serial.println(F("SD Module initialization failed!"));// Change for every new one!!!!!!!
         sendSMS("AT+HTTPPARA=\"URL\",\"http://relay-post-8447.twil.io/recipient_loop?", "To=%2b16158122833&", "From=%2b19049808059&", "Body=SD%20Module%20Initialization%20Fail\"\r");
         delay(3000);
       }
