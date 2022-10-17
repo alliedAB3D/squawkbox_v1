@@ -14,3 +14,39 @@
   - "to1.txt","to2.txt","to3.txt", etc. (Save a single customer contact to each of these files format -> "6155555555").
   - "From.txt" (This is the SquawkBox's phone # format -> "From=%2b16155555555&").
   - "url.txt" (This is the twilio end pioint URL, saved in the backups).
+
+### Parts-List
+- Twilio
+  - SIM card (Super SIM)
+  - Phone #
+
+- Rugged Circuits
+  - Ruggeduino Mega
+  - DIN rail mounts
+
+- DF Robot
+  - SIM7000A Module
+  - Large Antenna
+
+- Adafruit
+  - SD Card module
+  - RTC module
+  - LCD w/ I2C backpack
+
+- OshPark / JLC PCB
+  - PCB
+
+- Automation Direct
+  - Contactors (KPR-5CF-115VACDC-1)
+  - Jumpers
+
+- Amazon
+  - 120VAC -> 12VDC Transformer
+  - RS-485 Module
+  - Rotary Encoder
+  - Screw terminals
+  - 12VDC Barrel connectors
+  - 3mm screws, washers
+  - Pin headers male/female
+  - SD card 32G
+
