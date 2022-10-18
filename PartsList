@@ -1,1 +1,37 @@
+## Parts-List
+- Twilio
+  - SIM card (Super SIM)
+  - Phone #
+
+- Rugged Circuits
+  - Ruggeduino Mega
+  - DIN rail mounts
+
+- DF Robot
+  - SIM7000A Module
+  - Large GSM Antenna
+  - Interface Cable SMA to U.FL
+
+- Adafruit
+  - microSD Breakout Board
+  - RTC module PCF8523
+  - Standard LCD 20x4
+  - LCD I2C/SPI backpack
+
+- OshPark / JLC PCB
+  - PCB
+
+- Automation Direct
+  - Contactors (KPR-5CF-115VACDC-1)
+  - Jumpers
+
+- Amazon
+  - 120VAC -> 12VDC Transformer - Mean Well MDR-60-12
+  - RS-485 Module
+  - Rotary Encoder
+  - Screw terminals
+  - 12VDC Barrel connectors
+  - 3mm screws, washers
+  - Pin headers male/female
+  - SD card 32G
 
