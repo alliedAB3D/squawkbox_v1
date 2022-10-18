@@ -1,1 +1,118 @@
+=============================================================================================
+=============================================================================================
+=============================================================================================
+=============================================================================================
+relay-POST
+recipient_loop
 
+exports.handler = function (context, event, callback) {
+  // Make sure under Functions Settings tab:
+  // "Add my Twilio Credentials (ACCOUNT_SID) and (AUTH_TOKEN) to ENV" is CHECKED
+  console.log("invoked with",event);
+          
+  const twilioClient = context.getTwilioClient();
+
+  // Pass in From, To, and Body as query parameters
+  // Example: http://<path>?From=%2b15095550100&To=%2b15105550100&Body=Hello%20World
+  // Note URL encoding above
+
+  //default From number below in case of contact loading failure.
+  let from = event.From || '+19049808059'; 
+  //default To number below in case of contact loading failure.  (Marshall's number)
+  let to = event.To||'+16158122833';
+  console.log(typeof to); //troubleshooting printout
+  let body = event.Body||'Boiler Alarm';
+  // need to add a parsing switch case for 'body' (use startswith?) in
+  // order to send data to retool for separating into spreadsheet.
+  // Each alarm can show up and be parsed here in the backend to 
+  // free up memory and processing time on the microcontroller.
+  // also allows for much longer, prewritten messages to be sent.
+  // example: switch on body variable, case startswith 'prim', send primary low water message.
+  // break.   case startswith 'sec', send secondary low water message.  break.  etc.
+  // Could also just send an alphanumerical value that corresponds to a specific 
+  // case on this end in a switch case instead of parsing with 'starswith.'
+
+  //The following for loop pulls in the 'to' value (a string of phone numbers separated 
+  //by commas) and splits the string delimiting by comma.  This creates an array of phone
+  //numbers that can be looped through and a message sent for each one.
+  //This allows for the sending of a single POST from the microcontroller triggering 
+  //text messages to be sent to multiple recipients nearly simultaneously.    
+  const myArray = to.split(",");
+  for (var i = 0; i < myArray.length; i++)
+  {
+  twilioClient.messages
+    .create({
+      body: body,
+      to: myArray[i],
+      from: from,
+    })
+    .then((message) => {
+      console.log('SMS successfully sent');
+      console.log(message.sid);
+      return callback(null, 'success');
+    })
+    .catch((error) => {
+      console.log(error);
+      return callback(error);
+    });
+  };
+};
+=============================================================================================
+=============================================================================================
+=============================================================================================
+=============================================================================================
+relay-POST
+secondary-low-water
+
+exports.handler = function (context, event, callback) {
+  // Make sure under Functions Settings tab:
+  // "Add my Twilio Credentials (ACCOUNT_SID) and (AUTH_TOKEN) to ENV" is CHECKED
+  console.log("invoked with",event);
+    
+      
+  const twilioClient = context.getTwilioClient();
+
+  // Pass in From, To, and Body as query parameters
+  // Example: https://x.x.x.x/<path>?From=%2b15095550100&To=%2b15105550100&Body=Hello%20World
+  // Note URL encoding above
+  let from = event.From || '+19049808059';
+  // If passing in To, make sure to validate, to avoid sending SMS to unexpected locations
+  let to = event.To||'+17065755866';
+  let body = event.Body||'Boiler Alarm';
+
+  twilioClient.messages
+    .create({
+      body: body,
+      to: to,
+      from: from,
+    })
+    .then((message) => {
+      console.log('SMS successfully sent');
+      console.log(message.sid);
+      return callback(null, 'success');
+    })
+    .catch((error) => {
+      console.log(error);
+      return callback(error);
+    });
+};
+=============================================================================================
+=============================================================================================
+=============================================================================================
+=============================================================================================
+send-message-to-device
+(new name for every SquawkBox)(used for receiving SMS from the customer)
+
+exports.handler = function(context, event, callback) {  
+ const twilioClient = context.getTwilioClient();
+
+  twilioClient.supersim.smsCommands 
+    .create({
+        sim: 'New SIM SID HERE',
+        payload: event.Body
+      })
+    .then(payload => {
+      console.log(payload.sid)
+ return callback(null, "OK")
+    });
+};
