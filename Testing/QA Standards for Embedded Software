@@ -2,7 +2,7 @@ Testing/QA Standards for Embedded Software
 
 - Testing priorities: Test for most likely errors AND Test for errors with the worst possible consequences. 
 - Testing should be designed to be destructive, that is, to prove the program doesn’t work!
-- Tests should be thought of being conducted with an expected result of either a success or a failure.
+- Tests should be thought of as being conducted with an expected result of either a success or a failure.
   * Tests with an expected success are generally ones that are testing for functionality, in as much 
     as ensuring that the unit designed does what it is intended to do. 
   * Tests with an expected failure are generally ones that are testing to ensure that the designed unit 
@@ -21,6 +21,9 @@ Software:
   any memory overflows / stack crashes. A 20% tolerance is to be maintained. If available SRAM 
   goes below this, then memory allocation will be further developed and performance modifications 
   made before proceeding with testing. 
+  
+- Field test units will have the memoryTest() function placed in them at strategic locations. 
+  This allows the testing engineer to get notified of any possible memory leaks in these units. 
 
 - By placing a trace statement, such as a printf( ), at the beginning of every block, you can 
   track when the block—and by implication all the statements in the block—are executed.
