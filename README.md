@@ -26,12 +26,14 @@
 
 - DF Robot
   - SIM7000A Module
-  - Large Antenna
+  - Large GSM Antenna
+  - Interface Cable SMA to U.FL
 
 - Adafruit
-  - SD Card module
-  - RTC module
-  - LCD w/ I2C backpack
+  - microSD Breakout Board
+  - RTC module PCF8523
+  - Standard LCD 20x4
+  - LCD I2C/SPI backpack
 
 - OshPark / JLC PCB
   - PCB
@@ -41,7 +43,7 @@
   - Jumpers
 
 - Amazon
-  - 120VAC -> 12VDC Transformer
+  - 120VAC -> 12VDC Transformer - Mean Well MDR-60-12
   - RS-485 Module
   - Rotary Encoder
   - Screw terminals
