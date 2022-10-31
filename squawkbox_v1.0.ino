@@ -1,14 +1,16 @@
-// squawkbox_v1.0.4 17 Oct 2022 @ 1440
-// Added PCB schematic comments
-// Added TODO list
-// Added REMEMBER list
+// squawkbox_v1.0.4 24 Oct 2022 @ 1100
+
+//WHAT GOT DONE TODAY:
+// whatever I changed on site??? for shame...
 
 // TODO:
+// Standardize function and variable names.
+// Optimize variables.
 // Add in a function that checks that the phone # read from the SD card isnt something stupid. 
 // Add in an LED_fault() for if the SIM module fails, the customer will be notified via a fault blink code. 
 
 //*************************REMEMBER****************************************//
-// change default phone numbers for Case Cart testing purposes!!!
+// change default phone numbers for Case Cart testing purposes!!! SD boot() and memoryTest().
 //*************************REMEMBER****************************************//
 
 #include <SD.h>
@@ -230,15 +232,15 @@ void Honeywell_alarm()
     {
       alarmTime3 = currentMillis;
       alarmSwitch3 = true;
-      Serial.println(F("Honeywell_alarm() alarmSwitch is true"));
+      //Serial.println(F("Honeywell_alarm() alarmSwitch is true"));
     }
     difference3 = currentMillis - alarmTime3;
 
     if ( difference3 >= debounceInterval)
     {
-      Serial.println(F("sending FSG alarm message"));
+      //Serial.println(F("sending FSG alarm message"));
       sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, BCbody);
-      Serial.println(F("Entering modbus reading function..."));
+      //Serial.println(F("Entering modbus reading function..."));
       readModbus();
       Serial.println(F("message sent or simulated"));
       memoryTest();
@@ -357,7 +359,7 @@ void sendSMS(char pt1[], char pt2[], char pt3[], char pt4[])
   strcat(finalURL, pt2);
   strcat(finalURL, pt3);
   strcat(finalURL, pt4);
-  Serial.print("finalURL is: ");
+  // Serial.print("finalURL is: ");
   Serial.println(finalURL);
   delay(20);
   Serial1.print("AT+HTTPTERM\r");
@@ -405,7 +407,7 @@ void timedmsg()
 
   if (difference6 >= dailytimer)
   {
-    sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, "Body=CaseCart3%20Routine%20Timer\"\r");
+    sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, "Body=CaseCart%20Routine%20Timer\"\r");
     difference6 = 0;
     msgswitch = false;
     msgtimer1 = 0;
@@ -568,13 +570,12 @@ void postTransmission()
 
 void readModbus()
 {
-  //Serial.println(F("In the readModbus() function now"));
-  delay(300);
   uint16_t result;
-  for (int i = 0; i < 5; ++i) 
+  for (int i = 0; i < 5; ++i) /*iterates the check for a modbus signal due to a high fail rate without it 
+                                This ensures a much better communication between the squawk and the boiler programmer.*/
   {
-    result = node.readHoldingRegisters (0x0000, 1);
-    delay(100);
+    result = node.readHoldingRegisters (0x0000, 1);//0x0000 is the address of the first holding register (Honeywell)
+    delay(100);                                    // 1 is the quantity of holding registers to read. (Make sure this is set!!!)
     if (result == node.ku8MBSuccess)
     {
       break;
@@ -582,11 +583,11 @@ void readModbus()
   }
   //Serial.print(F("The alarm register value is: "));
   //Serial.println(result);
-  delay(300);
+  //delay(300);
 
   if (result == node.ku8MBSuccess)
   {
-    delay(300);
+    //delay(300);
     //Serial.println(F("Alarm register result was success"));
     //delay(300);
     int alarmRegister = node.getResponseBuffer(result);
