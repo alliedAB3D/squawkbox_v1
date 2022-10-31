@@ -15,3 +15,10 @@
   - "From.txt" (This is the SquawkBox's phone # format -> "From=%2b16155555555&").
   - "url.txt" (This is the twilio end pioint URL, saved in the backups).
 
+### Installation Instructions
+- Panel
+  - 
+- Boiler
+  -
+- Set-Up
+  -
