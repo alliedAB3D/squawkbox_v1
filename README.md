@@ -12,7 +12,7 @@
 ### SD card set-up
 - Create:
   - "to1.txt","to2.txt","to3.txt", etc. (Save a single customer contact to each of these files format -> "6155555555").
-  - "From.txt" (This is the SquawkBox's phone # format -> "From=%2b16155555555&").
+  - "From1.txt" (This is the SquawkBox's phone # format -> "From=%2b16155555555&").
   - "url.txt" (This is the twilio end pioint URL, saved in the backups).
 
 ### Installation Instructions
