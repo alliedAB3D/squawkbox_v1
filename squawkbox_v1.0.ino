@@ -1,7 +1,8 @@
-// squawkbox_v1.0.5 09 NOV 2022 @ 1040
+// squawkbox_v1.1.0 11 NOV 2022 @ 1545
 
 //WHAT GOT DONE TODAY:
-// created production code v.0
+// created production code v.1
+// Installed on all 3 boilers at Case Cart
 
 // TODO:
 // Standardize function and variable names.
@@ -677,7 +678,7 @@ void memoryTest()
   const int threshold = 3000;
   int memory = freeMemory();
   Serial.print(F("memoryTest() Free RAM = "));
-  Serial.print(memory);
+  Serial.println(memory);
   //Serial.println(F(" bytes."));
   if (memory < threshold)
   {
