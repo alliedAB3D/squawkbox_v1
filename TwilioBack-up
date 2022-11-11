@@ -12,16 +12,16 @@ exports.handler = function (context, event, callback) {
           
   const twilioClient = context.getTwilioClient();
 
-  // Pass in From, To, and Body as query parameters
+  // Pass in From, To, and Body  as query parameters
   // Example: http://<path>?From=%2b15095550100&To=%2b15105550100&Body=Hello%20World
   // Note URL encoding above
 
   //default From number below in case of contact loading failure.
-  let from = event.From || '+19049808059'; 
-  //default To number below in case of contact loading failure.  (Marshall's number)
+  let from = event.From || '+16159038029'; //This phone # is recipient_loop_Default
+  //default To number below in case of contact loading failure.  (Clinton's number)
   let to = event.To||'+16158122833';
   console.log(typeof to); //troubleshooting printout
-  let body = event.Body||'Boiler Alarm';
+  let body = event.Body||'Generic Boiler Alarm';
   // need to add a parsing switch case for 'body' (use startswith?) in
   // order to send data to retool for separating into spreadsheet.
   // Each alarm can show up and be parsed here in the backend to 
