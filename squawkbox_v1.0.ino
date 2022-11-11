@@ -1,8 +1,7 @@
-// squawkbox_v1.1.0 11 NOV 2022 @ 1545
+// squawkbox_v1.1.0 11 NOV 2022 @ 1600
 
 //WHAT GOT DONE TODAY:
-// created production code v.1
-// Installed on all 3 boilers at Case Cart
+// removed end point for security
 
 // TODO:
 // Standardize function and variable names.
@@ -51,9 +50,9 @@ int gasIN;
 int gasOUT;
 int gasCounter;
 
-//example char urlHeaderArray[] = "AT+HTTPPARA="URL","http://relay-post-8447.twil.io/recipient_loop?";
-//example char contactFromArray[] = "From=%2b15034516078&";
-//example char conToTotalArray[] = "To=%2b17065755866&";
+//example char urlHeaderArray[] = "AT+HTTPPARA="URL","http:// your endPoint HERE / Twilio Function HERE";
+//example char contactFromArray[] = "From=%2b1Phone#&";
+//example char conToTotalArray[] = "To=%2b1Phone#&";
  
 char SetCombody[] = "Body=SquawkBox%20Setup%20Complete\"\r";
 char LWbody[] = "Body=Primary%20Low%20Water\"\r";
