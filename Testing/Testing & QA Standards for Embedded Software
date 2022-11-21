@@ -12,7 +12,7 @@ Testing/QA Standards for Embedded Software
 Software:
 - AVOID the String class as it will lead to excessive dynamic memory allocation, Heap fragmentation, 
   and random / abnormal behavior that is hard to diagnose.
-- All code that complies and is to be either submitted for GitHub commit or used in a hardware 
+- All code that compiles and is to be either submitted for GitHub commit or used in a hardware 
   testing application is to be ran through CPPCheck, and corrected accordingly. 
 
 - All dev code that is to be used in a hardware testing application is to have its respective 
