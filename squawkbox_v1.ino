@@ -1,7 +1,8 @@
-// squawkbox_v1.2.0 16 NOV 2022 @ 1540
+// squawkbox_v1.2.1 22 NOV 2022 @ 1600
 
 //WHAT GOT DONE TODAY:
-// Changed over to using INPUT_PULLUPs and pulling the PINs to GND. 
+// added (hlpcCommon == HIGH && alarmSwitch4) to the else statment of the HLPC() and the gas_pressure()
+          //Prevents false alarms caused by the in-series wiring of the boiler limit circuit.
 
 // TODO:
 // Standardize function and variable names.
@@ -9,7 +10,7 @@
 // Add in a function that checks that the phone # read from the SD card isnt something stupid. 
 // Add in an LED_fault() for if the SIM or SD module fails, the customer will be notified via a fault blink code. 
 
-//*************************REMEMBER************************** //
+//*************************REMEMBER***************************//
 // default phone number for testing purposes in memoryTest().
 //*************************REMEMBER***************************//
 
@@ -149,12 +150,12 @@ void primary_LW()
     {
       alarmTime = currentMillis;
       alarmSwitch = true;
-      //Serial.println(F("primary_LW alarmSwitch is true"));
+      Serial.println(F("primary_LW alarmSwitch is true"));
     }
     difference = currentMillis - alarmTime;
     if ( difference >= debounceInterval)
     {
-      //Serial.println(F("Primary low water.  Sending message"));
+      Serial.println(F("Primary low water.  Sending message"));
       sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, LWbody);
       //Serial.println(F("message sent or simulated"));
       memoryTest();
@@ -162,7 +163,8 @@ void primary_LW()
     }
     if (difference < debounceInterval)
     {
-      //Serial.println(difference);
+      Serial.print(F("PLWCO difference: "));
+      Serial.println(difference);
       return;
     }
   }
@@ -267,13 +269,13 @@ void HLPC()
     {
       alarmTime4 = currentMillis;
       alarmSwitch4 = true;
-      //Serial.println(F("HLPC() alarmSwitch is true"));
+      Serial.println(F("HLPC() alarmSwitch is true"));
     }
     difference4 = currentMillis - alarmTime4;
 
     if ( difference4 >= debounceInterval)
     {
-      //Serial.println(F("Sending HLPC alarm message"));
+      Serial.println(F("Sending HLPC alarm message"));
       sendSMS(urlHeaderArray, conToTotalArray, contactFromArray, HLPCbody);
       //Serial.println(F("message sent or simulated"));
       memoryTest();
@@ -281,13 +283,14 @@ void HLPC()
     }
     if (difference4 < debounceInterval)
     {
-      //Serial.println(difference4);
+      Serial.print(F("HLPC difference: "));
+      Serial.println(difference4);
       return;
     }
   }
   else
   {
-    if (hlpcNC == LOW && alarmSwitch4)//(hlpcCommon == HIGH && alarmSwitch4)
+    if ((hlpcNC == LOW && alarmSwitch4) || (hlpcCOMMON == HIGH && alarmSwitch4))//(hlpcCommon == HIGH && alarmSwitch4)Prevents false alarms caused by the in-series wiring of the boiler limit circuit
     {
       alarmSwitch4 = false;
       difference4 = 0;
@@ -326,7 +329,7 @@ void gasPressure()
   }
   else
   {
-    if (gasOUT == LOW && alarmSwitch5)
+    if ((gasOUT == LOW && alarmSwitch5) || (gasIN == HIGH && alarmSwitch5))//(gasIN == HIGH && alarmSwitch5)Prevents false alarms caused by the in-series wiring of the boiler limit circuit
     {
       alarmSwitch5 = false;
       difference5 = 0;
