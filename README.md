@@ -1,4 +1,4 @@
-# squawkbox_v1.0
+# squawkbox_v1
 
 ### Twilio side set-up
 - Register SIM & give it a name.
