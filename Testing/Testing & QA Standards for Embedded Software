@@ -75,8 +75,32 @@ the source code handy.
 =====================================================================================================================
 =========================================== Hardware / Field testing:================================================
 =====================================================================================================================
-
-- A1 Cleaners squawkbox-v3.LCD.0 TOBE installed SEPT 2022:
+- Case Cart squawkbox_v1.0.0 installed SEPT 2022:
+   Production code for original in house developed SquawkBox. 
+   
+   *Current hardware failures: 1. (KPR-SCF-115VACDC-1 contactor) - short discovered in the gasIN contactor. This caused 
+                                  the contacts to stay in the open position, which will not cause an alarm SMS to be 
+                                  sent. This prevented all Gas pressure alarms. (replaced)
+   *Current software failures: 1. (HLPC false alarm messages when PLWCO alarms) DA tank issues cause multiple PLWCO 
+                                  alarms in a row which caused false HLPC alarms. The limit circuit on the boiler is 
+                                  wired in series and the test board for the squawkBox is wired in parallel. The in-series 
+                                  circuit on the boiler means that an open PLWCO relay also cuts power to the HLPC. This
+                                  power drop on the HLPC was recognised by the squawk as an alarm intermittently.
+                                  CODE FIX: 
+                                  if ((hlpcNC == LOW && alarmSwitch4) || **(hlpcCOMMON == HIGH && alarmSwitch4)**)
+                                  {
+                                      reset all alarm timer variables.
+                                  }
+                                  This code fix ensures that the HLPC function resets BOTH when power is flowing completely
+                                  through the switch and when power drops completely off of the switch. 
+   *Software change 1.------------Changed the input PIN to be INPUT_PULLUPS and rewired the contactors in the panel to 
+                                  pull the GPIO pins to GND instead of HIGH.
+   
+   Initial concerns to address:
+   - Larger antennas needed. (installed OCT 2022)
+   - Need an LED fault indicator on the SquawBox panel for SquawkBox failure recognition. 
+=====================================================================================================================
+- A1 Cleaners squawkbox-v3.LCD.0 TOBE installed 2022:
    Completely new version. Replaced transformers with contactors, Major software update, added LCD screen,
    customer now has the ability to input their own phone numbers and activate / deactivate them. 
    
