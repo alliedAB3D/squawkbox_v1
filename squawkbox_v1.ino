@@ -1,7 +1,7 @@
-// squawkbox_v1.1.0 11 NOV 2022 @ 1600
+// squawkbox_v1.2.0 16 NOV 2022 @ 1540
 
 //WHAT GOT DONE TODAY:
-// removed end point for security
+// Changed over to using INPUT_PULLUPs and pulling the PINs to GND. 
 
 // TODO:
 // Standardize function and variable names.
@@ -93,18 +93,19 @@ void setup()
   Serial.begin(9600);
   Serial1.begin(19200); /* This functiion call sets up D18 as TX1 and D19 as RX1 on the Mega.
                        In the PCB (TX1 is ran to PIN 7/RX1) and (RX1 is ran to PIN 8/TX1) on the SIM7000A */
-  Serial.println(F("This is squawkbox_v1.0 sketch."));
+  Serial.println(F("This is squawkbox_v1.2.0 sketch."));
 
-  pinMode(low1, INPUT);
-  pinMode(low2, INPUT);
-  pinMode(alarmPin, INPUT);
-  pinMode(hlpcIN, INPUT);
-  pinMode(hlpcOUT, INPUT);
-  pinMode(gasINpin, INPUT);
-  pinMode(gasOUTpin, INPUT);
+  pinMode(low1, INPUT_PULLUP);
+  pinMode(low2, INPUT_PULLUP);
+  pinMode(alarmPin, INPUT_PULLUP);
+  pinMode(hlpcIN, INPUT_PULLUP);
+  pinMode(hlpcOUT, INPUT_PULLUP);
+  pinMode(gasINpin, INPUT_PULLUP);
+  pinMode(gasOUTpin, INPUT_PULLUP);
   pinMode(MAX485_RE_NEG, OUTPUT);
   pinMode(MAX485_DE, OUTPUT);
   pinMode(SIMpin, OUTPUT);
+  
   digitalWrite(MAX485_RE_NEG, 0);
   digitalWrite(MAX485_DE, 0);
 
@@ -142,7 +143,7 @@ void loop()
 
 void primary_LW()
 {
-  if ((primaryCutoff == HIGH) && (plwcCounter == 0))
+  if ((primaryCutoff == LOW) && (plwcCounter == 0))
   {
     if (alarmSwitch == false)
     {
@@ -167,7 +168,7 @@ void primary_LW()
   }
   else
   {
-    if (primaryCutoff == LOW && alarmSwitch)
+    if (primaryCutoff == HIGH && alarmSwitch)
     {
       alarmSwitch = false;
       difference = 0;
@@ -180,7 +181,7 @@ void primary_LW()
 
 void secondary_LW()
 {
-  if ((secondaryCutoff == HIGH) && (slwcCounter == 0))
+  if ((secondaryCutoff == LOW) && (slwcCounter == 0))
   {
     if (alarmSwitch2 == false)
     {
@@ -206,7 +207,7 @@ void secondary_LW()
   }
   else
   {
-    if (secondaryCutoff == LOW && alarmSwitch2)
+    if (secondaryCutoff == HIGH && alarmSwitch2)
     {
       alarmSwitch2 = false;
       difference2 = 0;
@@ -219,7 +220,7 @@ void secondary_LW()
 
 void Honeywell_alarm()
 {
-  if ((alarm == HIGH) && (alarmCounter == 0))
+  if ((alarm == LOW) && (alarmCounter == 0))
   {
     if (alarmSwitch3 == false)
     {
@@ -247,7 +248,7 @@ void Honeywell_alarm()
   }
   else
   {
-    if (alarm == LOW && alarmSwitch3)
+    if (alarm == HIGH && alarmSwitch3)
     {
       alarmSwitch3 = false;
       difference3 = 0;
@@ -260,7 +261,7 @@ void Honeywell_alarm()
 
 void HLPC()
 {
-  if ((hlpcCOMMON == HIGH) && (hlpcNC == LOW) && (hlpcCounter == 0))
+  if ((hlpcCOMMON == LOW) && (hlpcNC == HIGH) && (hlpcCounter == 0))
   {
     if (alarmSwitch4 == false)
     {
@@ -286,7 +287,7 @@ void HLPC()
   }
   else
   {
-    if (hlpcNC && alarmSwitch4)
+    if (hlpcNC == LOW && alarmSwitch4)//(hlpcCommon == HIGH && alarmSwitch4)
     {
       alarmSwitch4 = false;
       difference4 = 0;
@@ -299,7 +300,7 @@ void HLPC()
 
 void gasPressure()
 {
-  if ((gasIN == HIGH) && (gasOUT == LOW) && (gasCounter == 0))
+  if ((gasIN == LOW) && (gasOUT == HIGH) && (gasCounter == 0))
   {
     if (alarmSwitch5 == false)
     {
@@ -325,7 +326,7 @@ void gasPressure()
   }
   else
   {
-    if (gasOUT && alarmSwitch5)
+    if (gasOUT == LOW && alarmSwitch5)
     {
       alarmSwitch5 = false;
       difference5 = 0;
